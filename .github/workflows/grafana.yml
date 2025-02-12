@@ -110,7 +110,7 @@ jobs:
         run: |
           chmod +x ./scripts/getjsonfile.sh
           ./scripts/getjsonfile.sh
-          cat ./exported_dashboards/testdashboardcopy.json
+          cat ./exported_dashboards/testdashboard.json
 
       - name: Deploy Dashboards to Grafana
         env:
