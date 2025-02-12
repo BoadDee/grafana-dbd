@@ -68,40 +68,54 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Get Azure AD Token
-        run: |
-          ACCESS_TOKEN=$(curl -s -X POST \
-            -d "client_id=${{ secrets.AZURE_CLIENT_ID }}" \
-            -d "client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
-            -d "scope=https://graph.microsoft.com/.default" \
-            -d "grant_type=client_credentials" \
-            "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" | jq -r .access_token)
-          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+      # - name: Get Azure AD Token
+      #   run: |
+      #     ACCESS_TOKEN=$(curl -s -X POST \
+      #       -d "client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+      #       -d "client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
+      #       -d "scope=https://graph.microsoft.com/.default" \
+      #       -d "grant_type=client_credentials" \
+      #       "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" | jq -r .access_token)
+      #     echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
 
-      - name: Get Folder ID
-        run: |
-          FOLDER_NAME="dre"  # Change this to your folder name
-          FOLDER_ID=$(curl -s -X GET "${{ secrets.GRAFANA_URL }}/api/folders" \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Content-Type: application/json" | jq -r --arg name "$FOLDER_NAME" '.[] | select(.title==$name) | .id')
+      # - name: Get Folder ID
+      #   run: |
+      #     FOLDER_NAME="dre"  # Change this to your folder name
+      #     FOLDER_ID=$(curl -s -X GET "${{ secrets.GRAFANA_URL }}/api/folders" \
+      #       -H "Authorization: Bearer $ACCESS_TOKEN" \
+      #       -H "Content-Type: application/json" | jq -r --arg name "$FOLDER_NAME" '.[] | select(.title==$name) | .id')
 
-          if [ -z "$FOLDER_ID" ]; then
-            echo "Folder '$FOLDER_NAME' not found. Exiting..."
-            exit 1
-          fi
+      #     if [ -z "$FOLDER_ID" ]; then
+      #       echo "Folder '$FOLDER_NAME' not found. Exiting..."
+      #       exit 1
+      #     fi
 
-          echo "FOLDER_ID=$FOLDER_ID" >> $GITHUB_ENV
+      #     echo "FOLDER_ID=$FOLDER_ID" >> $GITHUB_ENV
 
-      - name: Deploy Dashboards to Folder
+      # - name: Deploy Dashboards to Folder
+      #   run: |
+      #     for file in dashboards/**/*.json; do
+      #       DASHBOARD_UID=$(basename "$file" .json)
+      #       echo "Deploying dashboard: $DASHBOARD_UID to folder ID: $FOLDER_ID"
+
+      #       curl -s -X POST "${{ secrets.GRAFANA_URL }}/api/dashboards/db" \
+      #         -H "Authorization: Bearer $ACCESS_TOKEN" \
+      #         -H "Content-Type: application/json" \
+      #         -d @<(jq --arg uid "$DASHBOARD_UID" --argjson folderId "$FOLDER_ID" \
+      #           '. + {overwrite: true, dashboard: {uid: $uid, folderId: $folderId}}' "$file") \
+      #         | jq
+      #     done
+
+      - name: Deploy Dashboards to Grafana
+        env:
+          GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+          GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}  # Service Account Token stored in GitHub Secrets
         run: |
           for file in dashboards/**/*.json; do
-            DASHBOARD_UID=$(basename "$file" .json)
-            echo "Deploying dashboard: $DASHBOARD_UID to folder ID: $FOLDER_ID"
+            echo "Deploying dashboard: $file"
 
-            curl -s -X POST "${{ secrets.GRAFANA_URL }}/api/dashboards/db" \
-              -H "Authorization: Bearer $ACCESS_TOKEN" \
+            curl -s -X POST "$GRAFANA_URL/api/dashboards/db" \
+              -H "Authorization: Bearer $GRAFANA_API_KEY" \
               -H "Content-Type: application/json" \
-              -d @<(jq --arg uid "$DASHBOARD_UID" --argjson folderId "$FOLDER_ID" \
-                '. + {overwrite: true, dashboard: {uid: $uid, folderId: $folderId}}' "$file") \
-              | jq
+              -d "@$file" | jq
           done
