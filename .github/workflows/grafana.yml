@@ -78,15 +78,30 @@ jobs:
             "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" | jq -r .access_token)
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
 
-      - name: Deploy Dashboards
+      - name: Get Folder ID
         run: |
-          for file in grafana-dashboards/*.json; do
-            DASHBOARD_UID=$(basename "$file" .json)  # Use filename as dashboard UID
-            echo "Deploying dashboard: $DASHBOARD_UID"
+          FOLDER_NAME="dre"  # Change this to your folder name
+          FOLDER_ID=$(curl -s -X GET "${{ secrets.GRAFANA_URL }}/api/folders" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" | jq -r --arg name "$FOLDER_NAME" '.[] | select(.title==$name) | .id')
 
-            curl -s -X POST "${{ secrets.GRAFANA_URL }}api/dashboards/db" \
+          if [ -z "$FOLDER_ID" ]; then
+            echo "Folder '$FOLDER_NAME' not found. Exiting..."
+            exit 1
+          fi
+
+          echo "FOLDER_ID=$FOLDER_ID" >> $GITHUB_ENV
+
+      - name: Deploy Dashboards to Folder
+        run: |
+          for file in dashboards/**/*.json; do
+            DASHBOARD_UID=$(basename "$file" .json)
+            echo "Deploying dashboard: $DASHBOARD_UID to folder ID: $FOLDER_ID"
+
+            curl -s -X POST "${{ secrets.GRAFANA_URL }}/api/dashboards/db" \
               -H "Authorization: Bearer $ACCESS_TOKEN" \
               -H "Content-Type: application/json" \
-              -d @<(jq --arg uid "$DASHBOARD_UID" '. + {overwrite: true, dashboard: {uid: $uid}}' "$file") \
+              -d @<(jq --arg uid "$DASHBOARD_UID" --argjson folderId "$FOLDER_ID" \
+                '. + {overwrite: true, dashboard: {uid: $uid, folderId: $folderId}}' "$file") \
               | jq
           done
