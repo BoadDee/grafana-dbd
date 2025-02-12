@@ -54,6 +54,13 @@ jobs:
       - name: Install jq (for JSON processing)
         run: sudo apt-get install jq -y
 
+      - name: azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Get Azure AD Token
         run: |
           ACCESS_TOKEN=$(curl -s -X POST \
