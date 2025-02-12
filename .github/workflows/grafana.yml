@@ -110,7 +110,7 @@ jobs:
         env:
           GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
           GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}  # Service Account Token stored in GitHub Secrets
-          GRAFANA_FOLER_UID: "dre"  # Folder UID where dashboards will be deployed
+          GRAFANA_FOLDER_UID: "dre"  # Folder UID where dashboards will be deployed
         run: |
           for file in grafana-dashboards/*.json; do
             echo "Deploying dashboard: $file"
