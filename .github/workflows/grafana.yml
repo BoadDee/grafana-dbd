@@ -110,12 +110,15 @@ jobs:
         env:
           GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
           GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}  # Service Account Token stored in GitHub Secrets
+          GRAFANA_FOLER_UID: "dre"  # Folder UID where dashboards will be deployed
         run: |
           for file in grafana-dashboards/*.json; do
             echo "Deploying dashboard: $file"
 
+            DASHBOARD_JSON=$(jq --arg folderUid "$GRAFANA_FOLDER_UID" '. + {folderUid: $folderUid}' "$file")
+
             curl -s -X POST "$GRAFANA_URL/api/dashboards/db" \
               -H "Authorization: Bearer $GRAFANA_API_KEY" \
               -H "Content-Type: application/json" \
-              -d "@$file" | jq
+              -d "$DASHBOARD_JSON" | jq
           done
