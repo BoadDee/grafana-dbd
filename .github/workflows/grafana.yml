@@ -66,7 +66,7 @@ jobs:
 
       - name: Deploy Dashboards
         run: |
-          for file in -grafana-dashboards/*.json; do
+          for file in grafana-dashboards/*.json; do
             DASHBOARD_UID=$(basename "$file" .json)  # Use filename as dashboard UID
             echo "Deploying dashboard: $DASHBOARD_UID"
 
