@@ -111,7 +111,7 @@ jobs:
           GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
           GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}  # Service Account Token stored in GitHub Secrets
         run: |
-          for file in grafana-dashboards/**/*.json; do
+          for file in grafana-dashboards/*.json; do
             echo "Deploying dashboard: $file"
 
             curl -s -X POST "$GRAFANA_URL/api/dashboards/db" \
