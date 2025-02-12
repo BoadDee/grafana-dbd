@@ -70,7 +70,7 @@ jobs:
             DASHBOARD_UID=$(basename "$file" .json)  # Use filename as dashboard UID
             echo "Deploying dashboard: $DASHBOARD_UID"
 
-            curl -s -X POST "${{ secrets.GRAFANA_URL }}/dashboards/dre" \
+            curl -s -X POST "${{ secrets.GRAFANA_URL }}api/dashboards/db" \
               -H "Authorization: Bearer $ACCESS_TOKEN" \
               -H "Content-Type: application/json" \
               -d @<(jq --arg uid "$DASHBOARD_UID" '. + {overwrite: true, dashboard: {uid: $uid}}' "$file") \
