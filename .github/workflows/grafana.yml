@@ -1,0 +1,75 @@
+# name: Deploy Grafana Dashboards
+
+# on:
+#   push:
+#     branches:
+#       - main  # Change this to your deployment branch
+#     paths:
+#       - "grafana-dashboards/*.json"  # Trigger only if dashboard files change
+#   workflow_dispatch:  # Allows manual execution
+
+# jobs:
+#   deploy-grafana-dashboards:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+
+#       - name: Deploy Dashboards to Grafana
+#         env:
+#           GRAFANA_URL: ${{ secrets.GRAFANA_URL }}  # Example: https://grafana.example.com
+#           GRAFANA_API_KEY: ${{ secrets.GRAFANA_API_KEY }}  # Grafana API key with 'Editor' role
+#         run: |
+#           DASHBOARD_FOLDER="grafana-dashboards"
+#           for dashboard in $DASHBOARD_FOLDER/*.json; do
+#             echo "Deploying dashboard: $dashboard"
+#             DASHBOARD_JSON=$(cat "$dashboard" | jq -c .)  # Ensure valid JSON format
+#             curl -X POST "$GRAFANA_URL/api/dashboards/db" \
+#               -H "Content-Type: application/json" \
+#               -H "Authorization: Bearer $GRAFANA_API_KEY" \
+#               --data-binary "{\"dashboard\": $DASHBOARD_JSON, \"overwrite\": true}"
+#           done
+
+
+name: Deploy Grafana Dashboards
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'grafana-dashboards/*.json'  # Trigger only when dashboard JSON files change
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install jq (for JSON processing)
+        run: sudo apt-get install jq -y
+
+      - name: Get Azure AD Token
+        run: |
+          ACCESS_TOKEN=$(curl -s -X POST \
+            -d "client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -d "client_secret=${{ secrets.AZURE_CLIENT_SECRET }}" \
+            -d "scope=https://graph.microsoft.com/.default" \
+            -d "grant_type=client_credentials" \
+            "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" | jq -r .access_token)
+          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+
+      - name: Deploy Dashboards
+        run: |
+          for file in dashboards/*.json; do
+            DASHBOARD_UID=$(basename "$file" .json)  # Use filename as dashboard UID
+            echo "Deploying dashboard: $DASHBOARD_UID"
+
+            curl -s -X POST "${{ secrets.GRAFANA_URL }}/api/dashboards/db" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d @<(jq --arg uid "$DASHBOARD_UID" '. + {overwrite: true, dashboard: {uid: $uid}}' "$file") \
+              | jq
+          done

@@ -1,0 +1,43 @@
+
+{
+"dashboard": {
+    "id": null,
+    "uid": "test-dashboard",
+    "title": "Test Dashboard",
+    "tags": ["example"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "5s",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "CPU Usage",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": "CPU Usage",
+            "logBase": 1
+          },
+          {
+            "format": "short",
+            "logBase": 1
+          }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2
+      }
+    ]
+  },
+  "overwrite": true
+}
